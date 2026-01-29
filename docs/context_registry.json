@@ -1,0 +1,30 @@
+{
+  "protocol:init": {
+    "file": "PROTOCOL.md",
+    "section": "0. Core Protocol: Context & Requirements (MANDATORY)"
+  },
+  "protocol:safety": {
+    "file": "PROTOCOL.md",
+    "section": "0.1. Safety & Autonomy (Strict)"
+  },
+  "protocol:branching": {
+    "file": "PROTOCOL.md",
+    "section": "2.1. Strict Protocol: Git Branching & Scope"
+  },
+  "protocol:documentation": {
+    "file": "PROTOCOL.md",
+    "section": "2.2. Documentation Protocol (Mandatory)"
+  },
+  "protocol:standards": {
+    "file": "docs/CODING_STANDARDS.md",
+    "section": null
+  },
+  "protocol:scripts": {
+    "file": "SCRIPTS-CATALOG.md",
+    "section": null
+  },
+  "protocol:progress": {
+    "file": "docs/PROGRESS.md",
+    "section": "Active Tasks"
+  }
+}
