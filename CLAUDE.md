@@ -22,20 +22,37 @@ To minimize hallucination and ensure strict alignment with project goals, the AI
 
 - **Goal:** AI-powered CV/Resume maker with JSON-based storage, versioned experiences, and AI-assisted tailoring
 - **Tech Stack:** Python 3.13, Django 6.0, HTMX, Tailwind CSS, Google Gemini (Flash 1.5), WeasyPrint, SQLite (minimal, for Django internals)
+- **Current Phase:** Phase 1 (Foundation) complete. Phase 2 (Core UI) is next.
 
 ### 1.1. Architecture
 - **Storage:** Single JSON file (`resume_bank/data.json`) - git-trackable
+- **Models:** Pydantic v2 models in `core/models.py` (NOT Django ORM models)
 - **Versioning:** Experience versions nested under parent experience
 - **IDs:** Human-readable (exp_001, skill_python, jd_001, etc.)
+- **Repository:** Pure functional JSON operations in `core/services/repository.py`
 
 ### 1.2. Tooling & Environment
-- **Package Manager:** `uv` - STRICTLY USE THIS.
+- **Package Manager:** `uv` - STRICTLY USE THIS. Never pip.
 - **Environment:** Local `.venv`
+- **Environment Variables:** Use `.env` file with `python-dotenv`. Expected vars: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `GEMINI_API_KEY`
 - **Run Commands:**
   - Server: `uv run python manage.py runserver`
   - Migrations: `uv run python manage.py migrate`
   - Test: `uv run python manage.py test`
+  - Lint: `uv run ruff check .`
   - CLI: `uv run python -m cli.main <command>`
+
+### 1.3. CLI Commands Reference
+All CLI commands use Typer + Rich. Entry point: `uv run python -m cli.main`
+
+| Group | Commands |
+|-------|----------|
+| **root** | `version`, `status`, `init` |
+| **profile** | `show`, `set <field> <value>`, `add-email`, `add-phone` |
+| **skill** | `list`, `add`, `edit`, `delete`, `show` |
+| **experience** | `list`, `add`, `show`, `delete`, `version add`, `version edit`, `version delete` |
+| **jd** | `list`, `add`, `show`, `delete` |
+| **resume** | `list`, `create`, `show`, `add-version`, `add-skill`, `delete` |
 
 ## 2. Coding Standards & Conventions
 
@@ -45,8 +62,8 @@ To minimize hallucination and ensure strict alignment with project goals, the AI
 ### 2.1. Core Principles
 1. **Functional Programming** over OOP whenever possible
 2. **Pure Functions** - no side effects, deterministic outputs
-3. **Immutability** - prefer immutable data structures
-4. **Composition** over inheritance
+3. **Immutability** - prefer immutable data structures (use `.model_copy()`)
+4. **Composition** over inheritance (use `pipe()` utility in repository)
 5. **Type Hints** - all functions must have type annotations
 
 ### 2.2. Strict Protocol: Git Branching & Scope
@@ -69,6 +86,7 @@ To minimize hallucination and ensure strict alignment with project goals, the AI
 ### 2.4. Verification Standard
 - **Test Command:** `uv run python manage.py test`
 - **Lint Command:** `uv run ruff check .`
+- **Ruff Config:** Line length 100, target Python 3.13, rules: E, F, I, W (E501 ignored)
 - **Definition of Done:** Tests pass, lint passes, docs updated.
 
 ### 2.5. Architectural Constraints
@@ -79,30 +97,56 @@ To minimize hallucination and ensure strict alignment with project goals, the AI
 
 ### 2.6. Directory Structure
 ```
-cv-maker-03/
-├── config/              # Django settings
-├── core/                # Django app
-│   ├── services/        # Business logic
-│   │   ├── repository.py    # JSON file operations
-│   │   ├── ai_service.py    # Gemini integration
-│   │   └── exporter.py      # PDF generation
-│   ├── views.py
+cv_maker_03/
+├── config/                  # Django settings
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── core/                    # Django app
+│   ├── models.py            # Pydantic models (NOT Django ORM)
+│   ├── views.py             # Dashboard view
+│   ├── urls.py              # App URL routes
+│   ├── services/
+│   │   └── repository.py    # Pure functional JSON operations
 │   └── templates/
-├── cli/                 # CLI entry points (Typer)
-│   ├── main.py
+│       └── core/
+│           └── dashboard.html
+├── cli/                     # CLI entry points (Typer)
+│   ├── main.py              # Root commands (version, status, init)
 │   └── commands/
-├── resume_bank/         # Data storage
+│       ├── profile.py
+│       ├── skill.py
+│       ├── experience.py
+│       ├── jd.py
+│       └── resume.py
+├── resume_bank/             # Data storage
 │   └── data.json
 ├── docs/
-│   ├── PROGRESS.md
+│   ├── PROGRESS.md          # Project milestones & status
+│   ├── CODING_STANDARDS.md  # Detailed coding guidelines
+│   ├── context_registry.json
 │   └── requirements/
+│       └── TEMPLATE.md
 ├── scripts/
-│   └── temp/            # Gitignored temp scripts
+│   ├── context.py
+│   └── temp/                # Gitignored temp scripts
 ├── pyproject.toml
-└── CLAUDE.md
+├── uv.lock
+├── CLAUDE.md
+├── GEMINI.md
+└── SCRIPTS_CATALOG.md
 ```
 
+### 2.7. Not Yet Implemented
+- Tests (no test infrastructure exists yet)
+- AI service integration (`core/services/ai_service.py` - not created)
+- PDF export (`core/services/exporter.py` - not created)
+- HTMX interactivity (template scaffolded but no endpoints)
+- `.env.example` file
+
 ## 3. Data Schema
+
+Defined as Pydantic v2 models in `core/models.py`. Enums: `SkillCategory` (Language, Framework, Tool, Database, Cloud, Soft, Other), `SkillLevel` (Junior, Mid, Senior, Expert).
 
 ```json
 {
@@ -120,13 +164,15 @@ cv-maker-03/
   "skills": [{
     "id": "skill_001",
     "name": "Python",
-    "category": "Language|Framework|Tool|Database|Cloud|Soft",
+    "category": "Language|Framework|Tool|Database|Cloud|Soft|Other",
     "level": "Junior|Mid|Senior|Expert",
     "years": 5
   }],
   "experiences": [{
     "id": "exp_001",
     "company": "Acme Corp",
+    "location": "string",
+    "company_url": "string",
     "start_date": "2020-03",
     "end_date": "2023-06",
     "is_current": false,
